@@ -183,12 +183,11 @@ async function loadUsage() {
             <td>${escapeHtml(row.model || "")}</td>
             <td>${escapeHtml(row.sourceModel || "")}</td>
             <td>${escapeHtml(row.channelNote || row.channelId || "")}</td>
-            <td>${row.tokenUsage ?? "—"}</td>
             <td class="error-cell">${failureDetail(row)}</td>
             <td><button type="button" class="btn danger sm" data-usage-delete="${escapeAttr(row.id)}">删除</button></td>
           </tr>
         `).join("")
-      : `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">暂无使用记录</td></tr>`;
+      : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">暂无使用记录</td></tr>`;
 
     usageRows.querySelectorAll("[data-usage-delete]").forEach(button => {
       button.addEventListener("click", () => deleteUsage(button.dataset.usageDelete));

@@ -565,7 +565,7 @@ async function proxyChat(req, res, body) {
             }
           }
           res.end();
-          usageRecord({ success: true, endpoint: req.url, tokenUsage: null, bytes, model: alias, sourceModel: model.id, channelId: channel.id, channelNote: channel.note, provider });
+          usageRecord({ success: true, endpoint: req.url, bytes, model: alias, sourceModel: model.id, channelId: channel.id, channelNote: channel.note, provider });
         } catch (error) {
           const detail = usageErrorDetail(error, {
             channelId: channel.id,
@@ -573,7 +573,7 @@ async function proxyChat(req, res, body) {
             provider,
             upstreamStatus: upstream.status === 200 ? null : upstream.status
           });
-          usageRecord({ success: false, endpoint: req.url, tokenUsage: 0, bytes, model: alias, sourceModel: model.id, ...detail, error: error.message });
+          usageRecord({ success: false, endpoint: req.url, bytes, model: alias, sourceModel: model.id, ...detail, error: error.message });
           if (!res.destroyed && !res.writableEnded) {
             if (!streamErrorWritten) res.write(sseChunk(openAIStreamChunk(alias, `Stream error: ${error.message}`, "stop")));
             res.write(Buffer.from("data: [DONE]\n\n", "utf8"));
@@ -583,7 +583,7 @@ async function proxyChat(req, res, body) {
         return;
       }
 
-      usageRecord({ success: true, endpoint: req.url, tokenUsage: estimateTokens(upstream.body), model: alias, sourceModel: model.id, channelId: channel.id, channelNote: channel.note, provider });
+      usageRecord({ success: true, endpoint: req.url, model: alias, sourceModel: model.id, channelId: channel.id, channelNote: channel.note, provider });
       return sendJson(res, upstream.status, upstream.body);
     } catch (error) {
       const detail = usageErrorDetail(error, {
@@ -592,7 +592,7 @@ async function proxyChat(req, res, body) {
         provider
       });
       errors.push(detail);
-      usageRecord({ success: false, endpoint: req.url, tokenUsage: 0, model: alias, sourceModel: model.id, ...detail, error: error.message });
+      usageRecord({ success: false, endpoint: req.url, model: alias, sourceModel: model.id, ...detail, error: error.message });
     }
   }
   const firstError = errors[0] || {};
@@ -844,7 +844,6 @@ async function api(req, res, url) {
         usageRecord({
           success: true,
           endpoint: "/api/channels/:id/test",
-          tokenUsage: estimateTokens(result.upstream.body),
           model: result.model.alias || result.model.id,
           sourceModel: result.model.id,
           channelId: channel.id,
@@ -859,7 +858,6 @@ async function api(req, res, url) {
           model: result.model.id,
           alias: result.model.alias || result.model.id,
           provider: result.provider,
-          tokenUsage: estimateTokens(result.upstream.body),
           response: responseText(result.upstream.body)
         });
       } catch (error) {
@@ -867,7 +865,6 @@ async function api(req, res, url) {
         usageRecord({
           success: false,
           endpoint: "/api/channels/:id/test",
-          tokenUsage: 0,
           model: model.alias || model.id || "",
           sourceModel: model.id || "",
           channelId: channel.id,
