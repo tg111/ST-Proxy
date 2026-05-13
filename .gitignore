@@ -1,0 +1,12 @@
+node_modules/
+.local-node/
+data/
+.env
+.env.*
+!.env.example
+.DS_Store
+.claude/
+public_backup/
+aa.txt
+npm-debug.log*
+.idea/

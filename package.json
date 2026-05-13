@@ -1,0 +1,14 @@
+{
+  "name": "st-proxy",
+  "version": "1.0.0",
+  "description": "A Docker-friendly reverse proxy for SillyTavern with channel rotation and model aliases.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "check": "node --check src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

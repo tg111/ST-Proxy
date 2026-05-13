@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ST Proxy</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+
+  <div id="loginScreen" class="login-screen">
+    <div class="login-box">
+      <h1 class="login-title">ST Proxy</h1>
+      <p class="login-sub">管理后台</p>
+      <form id="loginForm" class="login-form">
+        <input id="loginKey" type="password" placeholder="输入 API Key" autocomplete="current-password" required>
+        <button type="submit">登录</button>
+      </form>
+      <p class="login-hint">SillyTavern 调用反代时也使用同一个 Bearer API key。</p>
+    </div>
+  </div>
+
+  <div id="appLayout" class="hidden">
+
+    <header class="topbar">
+      <div class="topbar-brand">
+        <h1>ST Proxy</h1>
+        <p>渠道管理、模型别名和使用记录</p>
+      </div>
+      <button id="logoutBtn" type="button" class="btn ghost">退出</button>
+    </header>
+
+    <div class="content-wrap">
+
+      <div class="info-card">
+        <div class="endpoint-row">
+          <span class="endpoint-label">Base URL</span>
+          <code id="baseUrl" class="endpoint-val"></code>
+        </div>
+        <div class="endpoint-row">
+          <span class="endpoint-label">Models</span>
+          <code class="endpoint-val">/v1/models</code>
+        </div>
+        <div class="endpoint-row">
+          <span class="endpoint-label">Chat</span>
+          <code class="endpoint-val">/v1/chat/completions</code>
+        </div>
+        <p class="info-hint">在 SillyTavern 中选择 OpenAI 兼容接口，API Key 填本后台登录 key。</p>
+      </div>
+
+      <section class="section">
+        <div class="section-header">
+          <h3>渠道管理</h3>
+          <div class="header-actions">
+            <button id="refreshBtn" type="button" class="btn ghost">刷新</button>
+            <button id="addChannelBtn" type="button" class="btn primary">添加渠道</button>
+          </div>
+        </div>
+        <div id="channels" class="channel-list"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-header">
+          <h3>使用记录</h3>
+          <div class="header-actions">
+            <button id="usageBtn" type="button" class="btn ghost">刷新</button>
+            <button id="clearUsageBtn" type="button" class="btn danger">清空记录</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>状态</th>
+                <th>模型</th>
+                <th>源模型</th>
+                <th>渠道</th>
+                <th>Token</th>
+                <th>错误</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="usageRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <div id="addModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>添加渠道</h3>
+        <button id="addCloseBtn" type="button" class="icon-btn">&#x2715;</button>
+      </div>
+      <form id="channelForm" class="form-stack">
+        <label class="field">
+          <span>API 地址 <em class="required-tag">必填</em></span>
+          <input name="apiBase" placeholder="https://api.openai.com 或 https://api.anthropic.com" required>
+        </label>
+        <label class="field">
+          <span>密钥</span>
+          <input name="apiKey" type="password">
+        </label>
+        <label class="field">
+          <span>备注</span>
+          <input name="note" placeholder="OpenAI 主账号、Claude 备用等">
+        </label>
+        <label class="field">
+          <span>服务商链接</span>
+          <input name="providerLink" placeholder="https://example.com">
+        </label>
+        <label class="field">
+          <span>格式</span>
+          <select name="providerType">
+            <option value="auto">自动识别</option>
+            <option value="openai">OpenAI 兼容</option>
+            <option value="anthropic">Claude / Anthropic</option>
+            <option value="gemini">Gemini</option>
+          </select>
+        </label>
+        <div class="form-actions">
+          <button type="button" class="btn ghost" id="addCancelBtn">取消</button>
+          <button type="submit" class="btn primary">保存渠道</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="editModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="editTitle">编辑渠道</h3>
+        <button id="editCloseBtn" type="button" class="icon-btn">&#x2715;</button>
+      </div>
+      <form id="editForm" class="form-stack">
+        <input name="id" type="hidden">
+        <label class="field">
+          <span>API 地址 <em class="required-tag">必填</em></span>
+          <input name="apiBase" required>
+        </label>
+        <label class="field">
+          <span>密钥</span>
+          <input name="apiKey" type="text" autocomplete="off">
+        </label>
+        <label class="field">
+          <span>备注</span>
+          <input name="note">
+        </label>
+        <label class="field">
+          <span>服务商链接</span>
+          <input name="providerLink">
+        </label>
+        <label class="field">
+          <span>格式</span>
+          <select name="providerType">
+            <option value="auto">自动识别</option>
+            <option value="openai">OpenAI 兼容</option>
+            <option value="anthropic">Claude / Anthropic</option>
+            <option value="gemini">Gemini</option>
+          </select>
+        </label>
+        <div class="form-actions">
+          <button type="button" class="btn ghost" id="editCancelBtn">取消</button>
+          <button type="submit" class="btn primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/assets/app.js"></script>
+</body>
+</html>
