@@ -11,6 +11,8 @@ const DB_FILE = path.join(DATA_DIR, "db.json");
 const CONFIG_FILE = path.join(ROOT_DIR, "config.json");
 const config = loadConfig();
 const PORT = Number(process.env.PORT || config.port || 3000);
+const KEEP_ALIVE_TIMEOUT_MS = Number(process.env.KEEP_ALIVE_TIMEOUT_MS || 65000);
+const HEADERS_TIMEOUT_MS = Number(process.env.HEADERS_TIMEOUT_MS || KEEP_ALIVE_TIMEOUT_MS + 1000);
 
 const jsonType = { "content-type": "application/json; charset=utf-8" };
 const textType = { "content-type": "text/plain; charset=utf-8" };
@@ -974,6 +976,9 @@ const server = http.createServer((req, res) => {
     else res.destroy(error);
   });
 });
+
+server.keepAliveTimeout = KEEP_ALIVE_TIMEOUT_MS;
+server.headersTimeout = Math.max(HEADERS_TIMEOUT_MS, KEEP_ALIVE_TIMEOUT_MS + 1000);
 
 server.on("clientError", (error, socket) => {
   if (socket.writable) socket.end("HTTP/1.1 400 Bad Request\r\n\r\n");

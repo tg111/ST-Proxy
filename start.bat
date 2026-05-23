@@ -9,21 +9,18 @@ set "NODE_EXE="
 set "NPM_CMD="
 
 where node >nul 2>&1
-if not errorlevel 1 (
-  set "NODE_EXE=node"
-  where npm >nul 2>&1
-  if not errorlevel 1 set "NPM_CMD=npm"
-)
+if not errorlevel 1 for /f "delims=" %%F in ('node -p "process.execPath" 2^>nul') do set "NODE_EXE=%%F"
+if defined NODE_EXE for %%F in ("%NODE_EXE%") do if exist "%%~dpFnpm.cmd" set "NPM_CMD=%%~dpFnpm.cmd"
 
 if defined NODE_EXE (
-  for /f "tokens=1 delims=." %%v in ('node -p "process.versions.node" 2^>nul') do set "NODE_MAJOR=%%v"
+  for /f "tokens=1 delims=." %%v in ('""%NODE_EXE%" -p "process.versions.node"" 2^>nul') do set "NODE_MAJOR=%%v"
 )
 if not defined NODE_MAJOR set "NODE_MAJOR=0"
 
 if %NODE_MAJOR% LSS 20 (
   if defined NODE_EXE (
     echo System Node.js is older than 20:
-    node --version
+    "%NODE_EXE%" --version
   ) else (
     echo Node.js was not found in PATH.
   )
@@ -83,4 +80,5 @@ if not exist "%DIST_DIR%\node.exe" (
 
 set "NODE_EXE=%DIST_DIR%\node.exe"
 set "NPM_CMD=%DIST_DIR%\npm.cmd"
+set "PATH=%DIST_DIR%;%PATH%"
 exit /b 0
