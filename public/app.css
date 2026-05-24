@@ -160,6 +160,13 @@ a:hover {
   margin-top: 1px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 /* ─── Content ──────────────────────────────────────── */
 
 .content-wrap {
@@ -326,6 +333,12 @@ a:hover {
 .icon-btn:hover {
   background: var(--bg);
   color: var(--text);
+}
+
+.github-icon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
 }
 
 /* ─── Channel Cards ────────────────────────────────── */
