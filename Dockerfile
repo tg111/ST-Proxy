@@ -5,7 +5,6 @@ COPY package.json ./
 COPY config.json ./
 COPY src ./src
 COPY public ./public
-COPY README.md README_zh.md ./
 
 ENV NODE_ENV=production
 ENV PORT=3000
