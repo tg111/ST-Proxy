@@ -12,6 +12,8 @@ ST Proxy 是一个用于 SillyTavern 的 Node.js 反代项目。它提供管理�
 
 * 从渠道 API 获取模型列表，选择要启用的模型，并给模型设置别名。
 
+* 每个渠道可单独选择是否向上游透传 `temperature`、`top_p`、`top_k`、`frequency_penalty`、`presence_penalty`。
+
 * 请求时按模型别名匹配渠道，同一别名存在多个渠道时自动轮询。
 
 * 当前渠道失败时自动尝试下一个匹配渠道。
@@ -87,6 +89,8 @@ Base URL: http://你的服务器:3000/v1
 
 OpenAI 兼容渠道支持流式透传。Claude/Gemini 原生流式响应会转换成 OpenAI 兼容的 SSE chunk。
 
+每个渠道都有“参数透传”配置。关闭某一项后，代理会在转发到该渠道前从请求体中移除对应参数；旧渠道没有该配置时，默认保持全部透传。
+
 ## 配置文件
 
 主配置文件放在根目录：
@@ -152,5 +156,7 @@ Authorization: Bearer <config.json 里的 apiKey>
 * 建议把 `data` 挂载为 Docker volume，避免容器重建后配置丢失。
 
 * 使用记录最多保留最近 1000 条。
+
+* 每个渠道可选择流式或非流式，默认流式。酒馆请求非流式时会强制渠道非流式；酒馆请求流式但渠道选择非流式时，会等待渠道完整返回后再用 OpenAI 兼容 SSE 一次性发给酒馆。
 
 * 不同服务商的原生流式格式不同，Claude/Gemini 流式响应会转换成 OpenAI 兼容的 SSE 文本 chunk。

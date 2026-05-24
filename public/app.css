@@ -590,6 +590,19 @@ a:hover {
   gap: 5px;
 }
 
+.fieldset {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px 12px;
+}
+
+.fieldset legend {
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
 .field > span {
   font-size: 13px;
   font-weight: 500;
@@ -628,6 +641,30 @@ a:hover {
 .field select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.08);
+}
+
+.check-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.check-grid label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: var(--text);
+  font-size: 12.5px;
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  word-break: break-all;
+}
+
+.check-grid input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
 }
 
 .form-actions {

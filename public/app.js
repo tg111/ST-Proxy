@@ -5,12 +5,14 @@ const logoutBtn = document.querySelector("#logoutBtn");
 const toast = document.querySelector("#toast");
 const channelsEl = document.querySelector("#channels");
 const usageRows = document.querySelector("#usageRows");
+const usageStatusFilter = document.querySelector("#usageStatusFilter");
 const addModal = document.querySelector("#addModal");
 const editModal = document.querySelector("#editModal");
 const editForm = document.querySelector("#editForm");
 
 let apiKey = localStorage.getItem(tokenKey) || "";
 let channels = [];
+const samplingParameters = ["temperature", "top_p", "top_k", "frequency_penalty", "presence_penalty"];
 
 const baseUrlEl = document.querySelector("#baseUrl");
 baseUrlEl.textContent = location.origin;
@@ -74,6 +76,9 @@ logoutBtn.addEventListener("click", () => {
 // ─── Add Channel Modal ─────────────────────────────────
 
 document.querySelector("#addChannelBtn").addEventListener("click", () => {
+  const form = document.querySelector("#channelForm");
+  form.elements.stream.value = "true";
+  setParameterPass(form, defaultParameterPass());
   addModal.classList.remove("hidden");
   addModal.querySelector("input[name='apiBase']").focus();
 });
@@ -93,7 +98,7 @@ document.querySelector("#channelForm").addEventListener("submit", async event =>
   event.preventDefault();
   const formEl = event.currentTarget;
   const submitBtn = formEl.querySelector("button[type='submit']");
-  const payload = Object.fromEntries(new FormData(formEl).entries());
+  const payload = formPayload(formEl);
   submitBtn.disabled = true;
   try {
     const channel = await request("/api/channels", { method: "POST", body: JSON.stringify(payload) });
@@ -126,7 +131,7 @@ editForm.addEventListener("submit", async event => {
   event.preventDefault();
   const formEl = event.currentTarget;
   const submitBtn = formEl.querySelector("button[type='submit']");
-  const payload = Object.fromEntries(new FormData(formEl).entries());
+  const payload = formPayload(formEl);
   const id = payload.id;
   delete payload.id;
   if (!payload.apiKey) delete payload.apiKey;
@@ -155,6 +160,7 @@ document.addEventListener("keydown", event => {
 document.querySelector("#refreshBtn").addEventListener("click", loadChannels);
 document.querySelector("#usageBtn").addEventListener("click", loadUsage);
 document.querySelector("#clearUsageBtn").addEventListener("click", clearUsage);
+usageStatusFilter.addEventListener("change", loadUsage);
 
 // ─── Load Data ─────────────────────────────────────────
 
@@ -174,7 +180,10 @@ async function loadChannels() {
 
 async function loadUsage() {
   try {
-    const rows = await request("/api/usage?limit=200");
+    const status = usageStatusFilter.value;
+    const params = new URLSearchParams({ limit: "200" });
+    if (status !== "all") params.set("status", status);
+    const rows = await request(`/api/usage?${params}`);
     usageRows.innerHTML = rows.length
       ? rows.map(row => `
           <tr>
@@ -187,7 +196,7 @@ async function loadUsage() {
             <td><button type="button" class="btn danger sm" data-usage-delete="${escapeAttr(row.id)}">删除</button></td>
           </tr>
         `).join("")
-      : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">暂无使用记录</td></tr>`;
+      : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">暂无匹配的使用记录</td></tr>`;
 
     usageRows.querySelectorAll("[data-usage-delete]").forEach(button => {
       button.addEventListener("click", () => deleteUsage(button.dataset.usageDelete));
@@ -237,6 +246,9 @@ function renderChannels() {
     const noModels = !enabledModels.length
       ? `<span class="no-models-hint">未启用模型</span>` : "";
     const isEnabled = channel.enabled !== false;
+    const streamLabel = channel.stream === false ? "非流式" : "流式";
+    const blockedParams = samplingParameters.filter(name => channel.parameterPass?.[name] === false);
+    const paramsLabel = blockedParams.length ? `不传 ${blockedParams.join(", ")}` : "采样参数透传";
 
     return `
       <div class="channel-card" data-id="${channel.id}">
@@ -254,6 +266,8 @@ function renderChannels() {
           </div>
           <div class="card-meta">
             <span class="badge">${escapeHtml(channel.providerType || "auto")}</span>
+            <span class="badge">${streamLabel}</span>
+            <span class="badge">${escapeHtml(paramsLabel)}</span>
             <span class="meta-sep">·</span>
             <span>使用 ${Number(channel.usageCount || 0)} 次</span>
             ${channel.note ? `<span class="meta-sep">·</span><span>${escapeHtml(channel.apiBase)}</span>` : ""}
@@ -408,6 +422,8 @@ async function openEditModal(id) {
   editForm.elements.note.value = channel.note || "";
   editForm.elements.providerLink.value = channel.providerLink || "";
   editForm.elements.providerType.value = channel.providerType || "auto";
+  editForm.elements.stream.value = channel.stream === false ? "false" : "true";
+  setParameterPass(editForm, { ...defaultParameterPass(), ...(channel.parameterPass || {}) });
   editModal.classList.remove("hidden");
   editForm.elements.apiBase.focus();
 }
@@ -431,6 +447,27 @@ function escapeAttr(value) {
 
 function cssEscape(value) {
   return String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function defaultParameterPass() {
+  return Object.fromEntries(samplingParameters.map(name => [name, true]));
+}
+
+function formPayload(formEl) {
+  const payload = Object.fromEntries(new FormData(formEl).entries());
+  payload.parameterPass = Object.fromEntries(samplingParameters.map(name => [
+    name,
+    Boolean(formEl.elements[`pass_${name}`]?.checked)
+  ]));
+  for (const name of samplingParameters) delete payload[`pass_${name}`];
+  return payload;
+}
+
+function setParameterPass(formEl, parameterPass) {
+  for (const name of samplingParameters) {
+    const input = formEl.elements[`pass_${name}`];
+    if (input) input.checked = parameterPass[name] !== false;
+  }
 }
 
 async function copyText(value, successMessage) {

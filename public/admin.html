@@ -63,6 +63,11 @@
         <div class="section-header">
           <h3>使用记录</h3>
           <div class="header-actions">
+            <select id="usageStatusFilter" class="input-sm">
+              <option value="all">全部</option>
+              <option value="success">仅成功</option>
+              <option value="failed">仅失败</option>
+            </select>
             <button id="usageBtn" type="button" class="btn ghost">刷新</button>
             <button id="clearUsageBtn" type="button" class="btn danger">清空记录</button>
           </div>
@@ -120,6 +125,23 @@
             <option value="gemini">Gemini</option>
           </select>
         </label>
+        <label class="field">
+          <span>渠道传输</span>
+          <select name="stream">
+            <option value="true">流式</option>
+            <option value="false">非流式</option>
+          </select>
+        </label>
+        <fieldset class="field fieldset">
+          <legend>参数透传</legend>
+          <div class="check-grid">
+            <label><input type="checkbox" name="pass_temperature" checked> temperature</label>
+            <label><input type="checkbox" name="pass_top_p" checked> top_p</label>
+            <label><input type="checkbox" name="pass_top_k" checked> top_k</label>
+            <label><input type="checkbox" name="pass_frequency_penalty" checked> frequency_penalty</label>
+            <label><input type="checkbox" name="pass_presence_penalty" checked> presence_penalty</label>
+          </div>
+        </fieldset>
         <div class="form-actions">
           <button type="button" class="btn ghost" id="addCancelBtn">取消</button>
           <button type="submit" class="btn primary">保存渠道</button>
@@ -161,6 +183,23 @@
             <option value="gemini">Gemini</option>
           </select>
         </label>
+        <label class="field">
+          <span>渠道传输</span>
+          <select name="stream">
+            <option value="true">流式</option>
+            <option value="false">非流式</option>
+          </select>
+        </label>
+        <fieldset class="field fieldset">
+          <legend>参数透传</legend>
+          <div class="check-grid">
+            <label><input type="checkbox" name="pass_temperature"> temperature</label>
+            <label><input type="checkbox" name="pass_top_p"> top_p</label>
+            <label><input type="checkbox" name="pass_top_k"> top_k</label>
+            <label><input type="checkbox" name="pass_frequency_penalty"> frequency_penalty</label>
+            <label><input type="checkbox" name="pass_presence_penalty"> presence_penalty</label>
+          </div>
+        </fieldset>
         <div class="form-actions">
           <button type="button" class="btn ghost" id="editCancelBtn">取消</button>
           <button type="submit" class="btn primary">保存</button>
