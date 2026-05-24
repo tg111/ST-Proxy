@@ -44,7 +44,6 @@ docker run -d \
   --name st-proxy \
   -p 3000:3000 \
   -v st-proxy-data:/app/data \
-  -e PROXY_API_KEY=pwd \
   st-proxy
 ```
 
@@ -59,7 +58,7 @@ docker run -d \
 
 默认 API Key 是 `pwd`。如果服务会暴露到本机以外，请修改 `apiKey`。
 
-使用 Docker Compose 时，先在 shell 中设置 `PROXY_API_KEY`，或从 `.env.example` 复制一份本地 `.env` 文件。
+使用 Docker Compose 时，默认读取镜像内的 `config.json`。如果显式设置了环境变量 `PROXY_API_KEY`，会覆盖 `config.json` 里的 `apiKey`。
 
 打开：
 

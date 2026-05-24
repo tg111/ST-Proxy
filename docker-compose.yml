@@ -5,7 +5,5 @@ services:
     restart: unless-stopped
     ports:
       - "8880:3000"
-    environment:
-      - PROXY_API_KEY=${PROXY_API_KEY:-pwd}
     volumes:
       - ./data:/app/data
