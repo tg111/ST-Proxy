@@ -6,6 +6,7 @@ const { callProvider } = require("./providers");
 const { responseFinishReason, responseText, usageErrorDetail } = require("./utils");
 const {
   createOpenAIStreamErrorDetector,
+  createKeywordStreamTruncator,
   openAIStreamChunk,
   openAIStreamHeaders,
   sseChunk
@@ -39,17 +40,39 @@ async function proxyChat(req, res, body) {
         let bytes = 0;
         let streamErrorWritten = false;
         const detectOpenAIStreamError = provider === "openai" ? createOpenAIStreamErrorDetector() : null;
+        const keywordTruncator = channel.keywordTruncation?.enabled
+          ? createKeywordStreamTruncator(channel.keywordTruncation.keyword)
+          : null;
+        const finishStream = () => {
+          res.write(sseChunk(openAIStreamChunk(alias, "", "stop")));
+          res.write(Buffer.from("data: [DONE]\n\n", "utf8"));
+          res.end();
+        };
         try {
           for await (const chunk of upstream.body) {
             const streamError = detectOpenAIStreamError ? detectOpenAIStreamError(chunk) : null;
             bytes += chunk.length;
-            res.write(chunk);
             if (streamError) {
               streamErrorWritten = true;
               throw streamError;
             }
+            if (keywordTruncator) {
+              const result = keywordTruncator.process(chunk);
+              for (const output of result.chunks) res.write(output);
+              if (result.matched) {
+                finishStream();
+                break;
+              }
+              continue;
+            }
+            res.write(chunk);
           }
-          res.end();
+          if (!res.writableEnded) {
+            if (keywordTruncator) {
+              for (const output of keywordTruncator.flush()) res.write(output);
+            }
+            res.end();
+          }
           usageRecord({ success: true, endpoint: req.url, bytes, model: alias, sourceModel: model.id, channelId: channel.id, channelNote: channel.note, provider });
         } catch (error) {
           const detail = usageErrorDetail(error, {

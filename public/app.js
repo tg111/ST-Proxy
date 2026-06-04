@@ -78,6 +78,7 @@ logoutBtn.addEventListener("click", () => {
 document.querySelector("#addChannelBtn").addEventListener("click", () => {
   const form = document.querySelector("#channelForm");
   form.elements.stream.value = "true";
+  setKeywordTruncation(form, { enabled: false, keyword: "" });
   setParameterPass(form, defaultParameterPass());
   addModal.classList.remove("hidden");
   addModal.querySelector("input[name='apiBase']").focus();
@@ -247,6 +248,9 @@ function renderChannels() {
       ? `<span class="no-models-hint">未启用模型</span>` : "";
     const isEnabled = channel.enabled !== false;
     const streamLabel = channel.stream === false ? "非流式" : "流式";
+    const keywordLabel = channel.keywordTruncation?.enabled
+      ? `关键词截断 ${channel.keywordTruncation.keyword}`
+      : "不截断";
     const blockedParams = samplingParameters.filter(name => channel.parameterPass?.[name] === false);
     const paramsLabel = blockedParams.length ? `不传 ${blockedParams.join(", ")}` : "采样参数透传";
 
@@ -267,6 +271,7 @@ function renderChannels() {
           <div class="card-meta">
             <span class="badge">${escapeHtml(channel.providerType || "auto")}</span>
             <span class="badge">${streamLabel}</span>
+            <span class="badge">${escapeHtml(keywordLabel)}</span>
             <span class="badge">${escapeHtml(paramsLabel)}</span>
             <span class="meta-sep">·</span>
             <span>使用 ${Number(channel.usageCount || 0)} 次</span>
@@ -423,6 +428,7 @@ async function openEditModal(id) {
   editForm.elements.providerLink.value = channel.providerLink || "";
   editForm.elements.providerType.value = channel.providerType || "auto";
   editForm.elements.stream.value = channel.stream === false ? "false" : "true";
+  setKeywordTruncation(editForm, channel.keywordTruncation || { enabled: false, keyword: "" });
   setParameterPass(editForm, { ...defaultParameterPass(), ...(channel.parameterPass || {}) });
   editModal.classList.remove("hidden");
   editForm.elements.apiBase.focus();
@@ -459,6 +465,12 @@ function formPayload(formEl) {
     name,
     Boolean(formEl.elements[`pass_${name}`]?.checked)
   ]));
+  payload.keywordTruncation = {
+    enabled: Boolean(formEl.elements.keywordTruncationEnabled?.checked),
+    keyword: String(formEl.elements.keywordTruncationKeyword?.value || "").trim()
+  };
+  delete payload.keywordTruncationEnabled;
+  delete payload.keywordTruncationKeyword;
   for (const name of samplingParameters) delete payload[`pass_${name}`];
   return payload;
 }
@@ -467,6 +479,15 @@ function setParameterPass(formEl, parameterPass) {
   for (const name of samplingParameters) {
     const input = formEl.elements[`pass_${name}`];
     if (input) input.checked = parameterPass[name] !== false;
+  }
+}
+
+function setKeywordTruncation(formEl, keywordTruncation) {
+  if (formEl.elements.keywordTruncationEnabled) {
+    formEl.elements.keywordTruncationEnabled.checked = keywordTruncation.enabled === true;
+  }
+  if (formEl.elements.keywordTruncationKeyword) {
+    formEl.elements.keywordTruncationKeyword.value = keywordTruncation.keyword || "";
   }
 }
 

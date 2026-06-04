@@ -20,6 +20,17 @@ function sanitizeParameterPass(input, previous = {}) {
   return Object.fromEntries(SAMPLING_PARAMETERS.map(name => [name, source[name] !== false && source[name] !== "false"]));
 }
 
+function sanitizeKeywordTruncation(input, previous = {}) {
+  const source = input && typeof input === "object" ? input : null;
+  const keyword = source
+    ? String(source.keyword || "").trim()
+    : String(previous.keyword || "").trim();
+  const enabled = source
+    ? (source.enabled === true || source.enabled === "true") && Boolean(keyword)
+    : previous.enabled === true && Boolean(keyword);
+  return { enabled, keyword };
+}
+
 function providerOf(channel) {
   if (channel.providerType && channel.providerType !== "auto") return channel.providerType;
   const base = normalizeBase(channel.apiBase).toLowerCase();
@@ -63,6 +74,7 @@ function sanitizeChannel(input, previous = {}) {
     providerType: input.providerType || previous.providerType || "auto",
     stream: input.stream === undefined ? previous.stream !== false : input.stream !== false && input.stream !== "false",
     parameterPass: sanitizeParameterPass(input.parameterPass, previous.parameterPass),
+    keywordTruncation: sanitizeKeywordTruncation(input.keywordTruncation, previous.keywordTruncation),
     enabled: input.enabled === undefined ? previous.enabled !== false : Boolean(input.enabled),
     models: Array.isArray(previous.models) ? previous.models : [],
     createdAt: previous.createdAt || new Date().toISOString(),

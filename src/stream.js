@@ -67,6 +67,126 @@ function createOpenAIStreamErrorDetector() {
   };
 }
 
+function createKeywordStreamTruncator(keyword) {
+  const marker = String(keyword || "");
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let pendingText = "";
+  let matched = false;
+  let lastModel = "";
+  let lastId = undefined;
+
+  function encodeData(data) {
+    return Buffer.from(`data: ${JSON.stringify(data)}\n\n`, "utf8");
+  }
+
+  function contentOf(data) {
+    const choice = data?.choices?.[0];
+    if (typeof choice?.delta?.content === "string") return { choice, path: "delta.content", text: choice.delta.content };
+    if (typeof choice?.text === "string") return { choice, path: "text", text: choice.text };
+    return null;
+  }
+
+  function withContent(data, content) {
+    const next = JSON.parse(JSON.stringify(data));
+    const choice = next.choices?.[0];
+    if (!choice) return null;
+    if (typeof choice.delta?.content === "string") choice.delta.content = content;
+    else if (typeof choice.text === "string") choice.text = content;
+    else return null;
+    return next;
+  }
+
+  function processData(data) {
+    if (matched || !marker) return { chunks: [Buffer.from(`data: ${data}\n\n`, "utf8")], matched };
+    if (data === "[DONE]") {
+      const chunks = pendingText ? [encodeData(openAIStreamChunk(lastModel, pendingText, null, lastId))] : [];
+      pendingText = "";
+      chunks.push(Buffer.from("data: [DONE]\n\n", "utf8"));
+      return { chunks, matched: false };
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(data);
+    } catch (error) {
+      return { chunks: [Buffer.from(`data: ${data}\n\n`, "utf8")], matched: false };
+    }
+
+    const content = contentOf(parsed);
+    lastModel = parsed.model || lastModel;
+    lastId = parsed.id || lastId;
+    if (!content) {
+      const chunks = pendingText ? [encodeData(openAIStreamChunk(lastModel, pendingText, null, lastId))] : [];
+      pendingText = "";
+      chunks.push(encodeData(parsed));
+      return { chunks, matched: false };
+    }
+
+    const combined = pendingText + content.text;
+    const index = combined.indexOf(marker);
+    if (index !== -1) {
+      matched = true;
+      pendingText = "";
+      const before = combined.slice(0, index);
+      const next = before ? withContent(parsed, before) : null;
+      return { chunks: next ? [encodeData(next)] : [], matched: true };
+    }
+
+    const keep = marker.length > 1 ? marker.length - 1 : 0;
+    const flushLength = Math.max(0, combined.length - keep);
+    const flushText = combined.slice(0, flushLength);
+    pendingText = combined.slice(flushLength);
+    const next = flushText ? withContent(parsed, flushText) : null;
+    return { chunks: next ? [encodeData(next)] : [], matched: false };
+  }
+
+  function process(chunk) {
+    if (matched || !marker) return { chunks: [chunk], matched };
+    buffer += decoder.decode(chunk, { stream: true });
+    const events = buffer.split(/\r?\n\r?\n/);
+    buffer = events.pop() || "";
+    const chunks = [];
+
+    for (const eventText of events) {
+      const dataLines = eventText.split(/\r?\n/).filter(line => line.startsWith("data:"));
+      if (!dataLines.length) {
+        chunks.push(Buffer.from(`${eventText}\n\n`, "utf8"));
+        continue;
+      }
+      const data = dataLines.map(line => line.slice(5).trim()).join("\n").trim();
+      const result = processData(data);
+      chunks.push(...result.chunks);
+      if (result.matched) return { chunks, matched: true };
+    }
+
+    return { chunks, matched: false };
+  }
+
+  function flush() {
+    if (matched || !marker) return [];
+    buffer += decoder.decode();
+    const chunks = [];
+    if (buffer.trim()) {
+      const dataLines = buffer.split(/\r?\n/).filter(line => line.startsWith("data:"));
+      if (dataLines.length) {
+        const result = processData(dataLines.map(line => line.slice(5).trim()).join("\n").trim());
+        chunks.push(...result.chunks);
+      } else {
+        chunks.push(Buffer.from(buffer, "utf8"));
+      }
+    }
+    if (pendingText) {
+      chunks.push(encodeData(openAIStreamChunk(lastModel, pendingText, null, lastId)));
+      pendingText = "";
+    }
+    buffer = "";
+    return chunks;
+  }
+
+  return { process, flush };
+}
+
 async function* parseSse(stream) {
   const decoder = new TextDecoder();
   let buffer = "";
@@ -225,6 +345,7 @@ module.exports = {
   openAIStreamHeaders,
   openAIFinishReason,
   createOpenAIStreamErrorDetector,
+  createKeywordStreamTruncator,
   parseSse,
   anthropicToOpenAIStream,
   geminiToOpenAIStream,
