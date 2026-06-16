@@ -27,7 +27,7 @@ function backupBadFile(file) {
 
 function loadConfig() {
   if (!fs.existsSync(CONFIG_FILE)) {
-    const next = { port: 3000, apiKey: "pwd" };
+    const next = { port: 8880, apiKey: "pwd" };
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(next, null, 2));
     return next;
   }
@@ -37,12 +37,12 @@ function loadConfig() {
   } catch (error) {
     console.warn(`Failed to read config.json: ${error.message}`);
     backupBadFile(CONFIG_FILE);
-    const next = { port: 3000, apiKey: "pwd" };
+    const next = { port: 8880, apiKey: "pwd" };
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(next, null, 2));
     return next;
   }
   const next = {
-    port: current.port || 3000,
+    port: current.port || 8880,
     apiKey: current.apiKey || "pwd"
   };
   if (next.port !== current.port || next.apiKey !== current.apiKey) {
@@ -52,7 +52,7 @@ function loadConfig() {
 }
 
 const config = loadConfig();
-const PORT = Number(process.env.PORT || config.port || 3000);
+const PORT = Number(process.env.PORT || config.port || 8880);
 const KEEP_ALIVE_TIMEOUT_MS = Number(process.env.KEEP_ALIVE_TIMEOUT_MS || 65000);
 const HEADERS_TIMEOUT_MS = Number(process.env.HEADERS_TIMEOUT_MS || KEEP_ALIVE_TIMEOUT_MS + 1000);
 

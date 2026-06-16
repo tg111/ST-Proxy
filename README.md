@@ -42,7 +42,7 @@ Docker：
 docker build -t st-proxy .
 docker run -d \
   --name st-proxy \
-  -p 3000:3000 \
+  -p 8880:8880 \
   -v st-proxy-data:/app/data \
   st-proxy
 ```
@@ -51,7 +51,7 @@ docker run -d \
 
 ```json
 {
-  "port": 3000,
+  "port": 8880,
   "apiKey": "pwd"
 }
 ```
@@ -63,7 +63,7 @@ docker run -d \
 打开：
 
 ```text
-http://localhost:3000/admin
+http://localhost:8880/admin
 ```
 
 用 `config.json` 里的 `apiKey` 登录后台。如果 `config.json` 不存在，服务会在根目录自动生成 `config.json`，并在启动日志中打印 key。
@@ -73,7 +73,7 @@ http://localhost:3000/admin
 在 SillyTavern 中选择 OpenAI 兼容接口：
 
 ```text
-Base URL: http://你的服务器:3000/v1
+Base URL: http://你的服务器:8880/v1
 ```
 
 后台中启用的模型别名会出现在 `/v1/models`。例如两个渠道都有 `claude-opus-4-7`，可以把它们的别名都设置为 `claude-opus-4-7`，SillyTavern 请求 `claude-opus-4-7` 时会在这些渠道之间轮询。

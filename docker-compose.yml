@@ -4,6 +4,6 @@ services:
     container_name: st-proxy
     restart: unless-stopped
     ports:
-      - "8880:3000"
+      - "8880:8880"
     volumes:
       - ./data:/app/data
