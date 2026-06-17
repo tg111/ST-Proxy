@@ -72,6 +72,7 @@ function sanitizeChannel(input, previous = {}) {
     note: String(input.note || ""),
     providerLink: String(input.providerLink || ""),
     providerType: input.providerType || previous.providerType || "auto",
+    anthropicBeta: String(input.anthropicBeta ?? previous.anthropicBeta ?? "").trim(),
     stream: input.stream === undefined ? previous.stream !== false : input.stream !== false && input.stream !== "false",
     parameterPass: sanitizeParameterPass(input.parameterPass, previous.parameterPass),
     keywordTruncation: sanitizeKeywordTruncation(input.keywordTruncation, previous.keywordTruncation),

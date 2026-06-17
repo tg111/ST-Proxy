@@ -37,13 +37,15 @@ async function callProvider(provider, channel, modelId, alias, body, requestPath
     const requestBody = mapOpenAIToAnthropic(body, modelId);
     if (body.stream) requestBody.stream = true;
     const upstreamUrl = openaiUrl(channel.apiBase, "/messages");
+    const headers = {
+      "content-type": "application/json",
+      "x-api-key": channel.apiKey,
+      "anthropic-version": "2023-06-01"
+    };
+    if (channel.anthropicBeta) headers["anthropic-beta"] = channel.anthropicBeta;
     const res = await fetch(upstreamUrl, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": channel.apiKey,
-        "anthropic-version": "2023-06-01"
-      },
+      headers,
       body: JSON.stringify(requestBody)
     });
 

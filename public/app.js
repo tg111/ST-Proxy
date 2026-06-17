@@ -253,6 +253,7 @@ function renderChannels() {
       : "不截断";
     const blockedParams = samplingParameters.filter(name => channel.parameterPass?.[name] === false);
     const paramsLabel = blockedParams.length ? `不传 ${blockedParams.join(", ")}` : "采样参数透传";
+    const betaLabel = channel.anthropicBeta ? `Beta ${channel.anthropicBeta}` : "";
 
     return `
       <div class="channel-card" data-id="${channel.id}">
@@ -271,6 +272,7 @@ function renderChannels() {
           <div class="card-meta">
             <span class="badge">${escapeHtml(channel.providerType || "auto")}</span>
             <span class="badge">${streamLabel}</span>
+            ${betaLabel ? `<span class="badge">${escapeHtml(betaLabel)}</span>` : ""}
             <span class="badge">${escapeHtml(keywordLabel)}</span>
             <span class="badge">${escapeHtml(paramsLabel)}</span>
             <span class="meta-sep">·</span>
@@ -427,6 +429,7 @@ async function openEditModal(id) {
   editForm.elements.note.value = channel.note || "";
   editForm.elements.providerLink.value = channel.providerLink || "";
   editForm.elements.providerType.value = channel.providerType || "auto";
+  editForm.elements.anthropicBeta.value = channel.anthropicBeta || "";
   editForm.elements.stream.value = channel.stream === false ? "false" : "true";
   setKeywordTruncation(editForm, channel.keywordTruncation || { enabled: false, keyword: "" });
   setParameterPass(editForm, { ...defaultParameterPass(), ...(channel.parameterPass || {}) });
