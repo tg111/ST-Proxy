@@ -42,7 +42,6 @@ async function callProvider(provider, channel, modelId, alias, body, requestPath
       "x-api-key": channel.apiKey,
       "anthropic-version": "2023-06-01"
     };
-    if (channel.anthropicBeta) headers["anthropic-beta"] = channel.anthropicBeta;
     const res = await fetch(upstreamUrl, {
       method: "POST",
       headers,

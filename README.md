@@ -158,8 +158,6 @@ Authorization: Bearer <config.json 里的 apiKey>
 
 * 每个渠道可选择流式或非流式，默认流式。酒馆请求非流式时会强制渠道非流式；酒馆请求流式但渠道选择非流式时，会等待渠道完整返回后再用 OpenAI 兼容 SSE 一次性发给酒馆。
 
-* Claude / Anthropic 原生渠道可填写 `Anthropic Beta`，代理会作为 `anthropic-beta` 请求头转发。例如中转站要求启用 1M 上下文时，可填写 `context-1m-2025-08-07`。
-
 * 每个渠道可单独开启关键词截断。开启后，实际流式响应中检测到配置的关键词会立即手动结束流式并向客户端发送 `[DONE]`。
 
 * 不同服务商的原生流式格式不同，Claude/Gemini 流式响应会转换成 OpenAI 兼容的 SSE 文本 chunk。
