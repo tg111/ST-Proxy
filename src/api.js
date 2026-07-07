@@ -5,7 +5,8 @@ const {
   mergeModels,
   providerOf,
   publicChannel,
-  sanitizeChannel
+  sanitizeChannel,
+  sanitizeModels
 } = require("./channels");
 const { testChannel } = require("./providers");
 const { responseText } = require("./utils");
@@ -119,11 +120,7 @@ async function api(req, res, url) {
     }
     if (req.method === "PUT" && action === "models") {
       const body = await readBody(req);
-      const updates = new Map((body.models || []).map(model => [model.id, model]));
-      channel.models = (channel.models || []).map(model => {
-        const next = updates.get(model.id) || {};
-        return { ...model, enabled: Boolean(next.enabled), alias: String(next.alias || model.id) };
-      });
+      channel.models = sanitizeModels(body.models);
       channel.updatedAt = new Date().toISOString();
       saveDb();
       return sendJson(res, 200, publicChannel(channel));

@@ -543,7 +543,7 @@ a:hover {
 
 .model-row {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1.3fr) minmax(0, 1fr);
+  grid-template-columns: 18px minmax(0, 1.3fr) minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
 }
@@ -846,7 +846,16 @@ tbody tr:hover td {
   }
 
   .model-row {
-    grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: 18px minmax(0, 1fr);
+  }
+
+  .model-row-head {
+    display: none;
+  }
+
+  .model-row [data-model-alias],
+  .model-row [data-action="remove-model"] {
+    grid-column: 2;
   }
 
   .endpoint-row {

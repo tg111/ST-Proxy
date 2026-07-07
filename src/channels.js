@@ -110,16 +110,52 @@ async function fetchModels(channel) {
   return (body.data || []).map(model => model.id).filter(Boolean);
 }
 
+function sanitizeModels(input) {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set();
+  const models = [];
+  for (const item of input) {
+    const id = String(item?.id || "").trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const alias = String(item?.alias || "").trim() || id;
+    models.push({
+      id,
+      alias,
+      enabled: item?.enabled === true || item?.enabled === "true"
+    });
+  }
+  return models;
+}
+
 function mergeModels(channel, fetched) {
   const oldById = new Map((channel.models || []).map(model => [model.id, model]));
-  channel.models = fetched.map(id => {
-    const old = oldById.get(id);
-    return {
-      id,
-      alias: old?.alias || id,
+  const nextModels = [];
+  const seen = new Set();
+
+  for (const id of fetched) {
+    const modelId = String(id || "").trim();
+    if (!modelId || seen.has(modelId)) continue;
+    const old = oldById.get(modelId);
+    nextModels.push({
+      id: modelId,
+      alias: old?.alias || modelId,
       enabled: old ? Boolean(old.enabled) : true
-    };
-  });
+    });
+    seen.add(modelId);
+  }
+
+  for (const old of channel.models || []) {
+    if (!old?.id || seen.has(old.id)) continue;
+    nextModels.push({
+      id: old.id,
+      alias: old.alias || old.id,
+      enabled: Boolean(old.enabled)
+    });
+    seen.add(old.id);
+  }
+
+  channel.models = nextModels;
   channel.updatedAt = new Date().toISOString();
 }
 
@@ -153,6 +189,7 @@ module.exports = {
   publicChannel,
   sanitizeChannel,
   fetchModels,
+  sanitizeModels,
   mergeModels,
   aliases,
   sortedCandidates

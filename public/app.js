@@ -107,7 +107,8 @@ document.querySelector("#channelForm").addEventListener("submit", async event =>
     await loadChannels();
     showToast("渠道已保存，正在自动获取模型...", "success");
     try {
-      await request(`/api/channels/${channel.id}/fetch-models`, { method: "POST" });
+      const result = await request(`/api/channels/${channel.id}/fetch-models`, { method: "POST" });
+      if (result.ok === false) throw new Error(testFailureText(result));
       showToast("渠道已保存，模型列表已自动获取", "success");
     } catch (modelError) {
       showToast(`渠道已保存，但自动获取模型失败：${modelError.message}`, "error");
@@ -287,28 +288,22 @@ function renderChannels() {
           </div>
         </div>
         <div class="models-section hidden">
-          ${(channel.models || []).length ? `
-            <div class="model-tools">
-              <button type="button" class="btn ghost sm" data-action="select-all">全选</button>
-              <button type="button" class="btn ghost sm" data-action="select-none">全不选</button>
-              <button type="button" class="btn ghost sm" data-action="invert-selection">反选</button>
-              <button type="button" class="btn primary sm" data-action="save-models">保存</button>
-            </div>
-            <p class="model-alias-hint">模型别名用于匹配相同模型；多个渠道使用同一别名时，请求会按别名匹配，并在失败时自动轮询下一个可用渠道。</p>
-            <div class="model-row model-row-head">
-              <span></span>
-              <span>模型名</span>
-              <span>模型别名</span>
-            </div>
-          ` : ""}
+          <div class="model-tools">
+            <button type="button" class="btn ghost sm" data-action="add-model">添加模型</button>
+            <button type="button" class="btn ghost sm" data-action="select-all">全选</button>
+            <button type="button" class="btn ghost sm" data-action="select-none">全不选</button>
+            <button type="button" class="btn ghost sm" data-action="invert-selection">反选</button>
+            <button type="button" class="btn primary sm" data-action="save-models">保存</button>
+          </div>
+          <p class="model-alias-hint">模型名是请求上游时使用的真实模型；模型别名用于匹配客户端请求，多个渠道使用同一别名时会自动轮询。</p>
+          <div class="model-row model-row-head">
+            <span></span>
+            <span>模型名</span>
+            <span>模型别名</span>
+            <span></span>
+          </div>
           <div class="model-rows">
-            ${(channel.models || []).map(model => `
-              <label class="model-row">
-                <input type="checkbox" data-model-enabled="${escapeAttr(model.id)}" ${model.enabled ? "checked" : ""}>
-                <code>${escapeHtml(model.id)}</code>
-                <input type="text" data-model-alias="${escapeAttr(model.id)}" value="${escapeAttr(model.alias || model.id)}" placeholder="别名">
-              </label>
-            `).join("") || `<p class="no-models-hint">尚未获取模型，请点击"获取模型"。</p>`}
+            ${(channel.models || []).map(model => modelRowHtml(model)).join("") || `<p class="no-models-hint">尚未获取模型，可点击"获取模型"或手动添加。</p>`}
           </div>
         </div>
       </div>
@@ -327,6 +322,19 @@ function renderChannels() {
       );
     }
   });
+}
+
+function modelRowHtml(model = {}) {
+  const id = model.id || "";
+  const alias = model.alias || id;
+  return `
+    <div class="model-row" data-model-row>
+      <input type="checkbox" data-model-enabled ${model.enabled !== false ? "checked" : ""} title="启用模型">
+      <input type="text" data-model-id value="${escapeAttr(id)}" placeholder="模型名">
+      <input type="text" data-model-alias value="${escapeAttr(alias)}" placeholder="模型别名">
+      <button type="button" class="btn danger sm" data-action="remove-model">删除</button>
+    </div>
+  `;
 }
 
 // ─── Channel Actions ───────────────────────────────────
@@ -380,8 +388,27 @@ async function channelAction(id, action, control) {
       }
       return;
     }
+    if (action === "add-model") {
+      const rowsEl = cardEl.querySelector(".model-rows");
+      rowsEl.querySelector(".no-models-hint")?.remove();
+      rowsEl.insertAdjacentHTML("beforeend", modelRowHtml({ enabled: true }));
+      rowsEl.querySelector("[data-model-row]:last-child [data-model-id]").focus();
+      return;
+    }
+    if (action === "remove-model") {
+      control.closest("[data-model-row]")?.remove();
+      const rowsEl = cardEl.querySelector(".model-rows");
+      if (!rowsEl.querySelector("[data-model-row]")) {
+        rowsEl.innerHTML = `<p class="no-models-hint">尚未获取模型，可点击"获取模型"或手动添加。</p>`;
+      }
+      return;
+    }
     if (action === "fetch") {
-      await request(`/api/channels/${id}/fetch-models`, { method: "POST" });
+      const result = await request(`/api/channels/${id}/fetch-models`, { method: "POST" });
+      if (result.ok === false) {
+        showToast(`获取模型失败：${testFailureText(result)}`, "error");
+        return;
+      }
       showToast("模型列表已更新", "success");
       await loadChannels();
       return;
@@ -393,14 +420,23 @@ async function channelAction(id, action, control) {
       return;
     }
     if (action === "save-models") {
-      const models = [...cardEl.querySelectorAll("[data-model-alias]")].map(input => {
-        const modelId = input.dataset.modelAlias;
+      const rows = [...cardEl.querySelectorAll("[data-model-row]")];
+      const models = rows.map(row => {
+        const modelId = row.querySelector("[data-model-id]").value.trim();
         return {
           id: modelId,
-          alias: input.value.trim() || modelId,
-          enabled: cardEl.querySelector(`[data-model-enabled="${cssEscape(modelId)}"]`).checked
+          alias: row.querySelector("[data-model-alias]").value.trim() || modelId,
+          enabled: row.querySelector("[data-model-enabled]").checked
         };
       });
+      if (models.some(model => !model.id)) {
+        showToast("模型名不能为空", "error");
+        return;
+      }
+      if (new Set(models.map(model => model.id)).size !== models.length) {
+        showToast("模型名不能重复", "error");
+        return;
+      }
       await request(`/api/channels/${id}/models`, { method: "PUT", body: JSON.stringify({ models }) });
       showToast("模型设置已保存", "success");
       await loadChannels();
@@ -449,10 +485,6 @@ function escapeHtml(value) {
 
 function escapeAttr(value) {
   return escapeHtml(value).replace(/`/g, "&#96;");
-}
-
-function cssEscape(value) {
-  return String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
 function defaultParameterPass() {
