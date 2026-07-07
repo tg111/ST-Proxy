@@ -1,7 +1,7 @@
 services:
-  st-proxy:
+  codex-responses-proxy:
     build: .
-    container_name: st-proxy
+    container_name: codex-responses-proxy
     restart: unless-stopped
     ports:
       - "8880:8880"

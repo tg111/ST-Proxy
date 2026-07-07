@@ -1,119 +1,48 @@
-const crypto = require("crypto");
 const { usageRecord } = require("./state");
 const { sendError, sendJson } = require("./http");
-const { SAMPLING_PARAMETERS, providerOf, sortedCandidates } = require("./channels");
-const { callProvider } = require("./providers");
-const { responseFinishReason, responseText, usageErrorDetail } = require("./utils");
-const {
-  createOpenAIStreamErrorDetector,
-  createKeywordStreamTruncator,
-  openAIStreamChunk,
-  openAIStreamHeaders,
-  sseChunk
-} = require("./stream");
+const { sortedCandidates } = require("./channels");
+const { callResponses } = require("./providers");
+const { usageErrorDetail } = require("./utils");
 
-function applyParameterPass(channel, body) {
-  const next = { ...body };
-  const parameterPass = channel.parameterPass || {};
-  for (const name of SAMPLING_PARAMETERS) {
-    if (parameterPass[name] === false) delete next[name];
-  }
-  return next;
-}
-
-async function proxyChat(req, res, body) {
+async function proxyResponses(req, res, body) {
   const alias = body.model;
   if (!alias) return sendError(res, 400, "Missing model");
-  const clientWantsStream = body.stream === true;
   const candidates = sortedCandidates(alias);
   if (!candidates.length) return sendError(res, 404, `No enabled channel found for model alias: ${alias}`);
 
   const errors = [];
   for (const { channel, model } of candidates) {
-    const provider = providerOf(channel);
     try {
-      const upstreamWantsStream = clientWantsStream && channel.stream !== false;
-      const upstreamBody = applyParameterPass(channel, { ...body, stream: upstreamWantsStream });
-      const upstream = await callProvider(provider, channel, model.id, alias, upstreamBody, req.url);
+      const upstream = await callResponses(channel, model.id, body);
       if (upstream.stream) {
         res.writeHead(upstream.status, upstream.headers);
         let bytes = 0;
-        let streamErrorWritten = false;
-        const detectOpenAIStreamError = provider === "openai" ? createOpenAIStreamErrorDetector() : null;
-        const keywordTruncator = channel.keywordTruncation?.enabled
-          ? createKeywordStreamTruncator(channel.keywordTruncation.keyword)
-          : null;
-        const finishStream = () => {
-          res.write(sseChunk(openAIStreamChunk(alias, "", "stop")));
-          res.write(Buffer.from("data: [DONE]\n\n", "utf8"));
-          res.end();
-        };
         try {
           for await (const chunk of upstream.body) {
-            const streamError = detectOpenAIStreamError ? detectOpenAIStreamError(chunk) : null;
             bytes += chunk.length;
-            if (streamError) {
-              streamErrorWritten = true;
-              throw streamError;
-            }
-            if (keywordTruncator) {
-              const result = keywordTruncator.process(chunk);
-              for (const output of result.chunks) res.write(output);
-              if (result.matched) {
-                finishStream();
-                break;
-              }
-              continue;
-            }
             res.write(chunk);
           }
-          if (!res.writableEnded) {
-            if (keywordTruncator) {
-              for (const output of keywordTruncator.flush()) res.write(output);
-            }
-            res.end();
-          }
-          usageRecord({ success: true, endpoint: req.url, bytes, model: alias, sourceModel: model.id, channelId: channel.id, channelNote: channel.note, provider });
+          res.end();
+          usageRecord({ success: true, endpoint: req.url, bytes, model: alias, sourceModel: model.id, channelId: channel.id, channelNote: channel.note });
         } catch (error) {
-          const detail = usageErrorDetail(error, {
-            channelId: channel.id,
-            channelNote: channel.note,
-            provider,
-            upstreamStatus: upstream.status === 200 ? null : upstream.status
-          });
-          usageRecord({ success: false, endpoint: req.url, bytes, model: alias, sourceModel: model.id, ...detail, error: error.message });
-          if (!res.destroyed && !res.writableEnded) {
-            if (!streamErrorWritten) res.write(sseChunk(openAIStreamChunk(alias, `Stream error: ${error.message}`, "stop")));
-            res.write(Buffer.from("data: [DONE]\n\n", "utf8"));
-            res.end();
-          }
+          usageRecord({ success: false, endpoint: req.url, bytes, model: alias, sourceModel: model.id, channelId: channel.id, channelNote: channel.note, error: error.message });
+          if (!res.destroyed && !res.writableEnded) res.end();
         }
         return;
       }
 
-      usageRecord({ success: true, endpoint: req.url, model: alias, sourceModel: model.id, channelId: channel.id, channelNote: channel.note, provider });
-      if (clientWantsStream) {
-        const id = `chatcmpl-${crypto.randomUUID()}`;
-        const content = responseText(upstream.body);
-        const contentChunk = sseChunk(openAIStreamChunk(alias, content, null, id));
-        const finishChunk = sseChunk(openAIStreamChunk(alias, "", responseFinishReason(upstream.body), id));
-        res.writeHead(upstream.status, openAIStreamHeaders());
-        res.write(contentChunk);
-        res.write(finishChunk);
-        res.write(Buffer.from("data: [DONE]\n\n", "utf8"));
-        return res.end();
-      }
+      usageRecord({ success: true, endpoint: req.url, model: alias, sourceModel: model.id, channelId: channel.id, channelNote: channel.note });
       return sendJson(res, upstream.status, upstream.body);
     } catch (error) {
       const detail = usageErrorDetail(error, {
         channelId: channel.id,
-        channelNote: channel.note,
-        provider
+        channelNote: channel.note
       });
       errors.push(detail);
       usageRecord({ success: false, endpoint: req.url, model: alias, sourceModel: model.id, ...detail, error: error.message });
     }
   }
+
   const firstError = errors[0] || {};
   sendError(res, 502, firstError.message || "All matching channels failed", {
     errors,
@@ -123,5 +52,5 @@ async function proxyChat(req, res, body) {
 }
 
 module.exports = {
-  proxyChat
+  proxyResponses
 };

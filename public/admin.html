@@ -3,20 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ST Proxy</title>
+  <title>Codex Responses Proxy</title>
   <link rel="stylesheet" href="/assets/app.css">
 </head>
 <body>
 
   <div id="loginScreen" class="login-screen">
     <div class="login-box">
-      <h1 class="login-title">ST Proxy</h1>
+      <h1 class="login-title">Codex Responses Proxy</h1>
       <p class="login-sub">管理后台</p>
       <form id="loginForm" class="login-form">
         <input id="loginKey" type="password" placeholder="输入 API Key" autocomplete="current-password" required>
         <button type="submit">登录</button>
       </form>
-      <p class="login-hint">SillyTavern 调用反代时也使用同一个 Bearer API key。</p>
+      <p class="login-hint">Codex 调用反代时也使用同一个 Bearer API key。</p>
     </div>
   </div>
 
@@ -24,8 +24,8 @@
 
     <header class="topbar">
       <div class="topbar-brand">
-        <h1>ST Proxy</h1>
-        <p>渠道管理、模型别名和使用记录</p>
+        <h1>Codex Responses Proxy</h1>
+        <p>Codex API 渠道管理、模型别名和使用记录</p>
       </div>
       <div class="topbar-actions">
         <a class="icon-btn" href="https://github.com/tg111/ST-Proxy" target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub">
@@ -49,10 +49,10 @@
           <code class="endpoint-val">/v1/models</code>
         </div>
         <div class="endpoint-row">
-          <span class="endpoint-label">Chat</span>
-          <code class="endpoint-val">/v1/chat/completions</code>
+          <span class="endpoint-label">Responses</span>
+          <code class="endpoint-val">/v1/responses</code>
         </div>
-        <p class="info-hint">在 SillyTavern 中选择 OpenAI 兼容接口，API Key 填本后台登录 key。</p>
+        <p class="info-hint">在 Codex 中配置自定义 provider，Base URL 使用本服务的 /v1 地址，API Key 填本后台登录 key。</p>
       </div>
 
       <section class="section">
@@ -109,7 +109,7 @@
       <form id="channelForm" class="form-stack">
         <label class="field">
           <span>API 地址 <em class="required-tag">必填</em></span>
-          <input name="apiBase" placeholder="https://api.openai.com 或 https://api.anthropic.com" required>
+          <input name="apiBase" placeholder="https://api.openai.com" required>
         </label>
         <label class="field">
           <span>密钥</span>
@@ -117,49 +117,12 @@
         </label>
         <label class="field">
           <span>备注</span>
-          <input name="note" placeholder="OpenAI 主账号、Claude 备用等">
+          <input name="note" placeholder="OpenAI 主账号、备用渠道等">
         </label>
         <label class="field">
           <span>服务商链接</span>
           <input name="providerLink" placeholder="https://example.com">
         </label>
-        <label class="field">
-          <span>格式</span>
-          <select name="providerType">
-            <option value="auto">自动识别</option>
-            <option value="openai">OpenAI 兼容</option>
-            <option value="anthropic">Claude / Anthropic</option>
-            <option value="gemini">Gemini</option>
-          </select>
-        </label>
-        <label class="field">
-          <span>渠道传输</span>
-          <select name="stream">
-            <option value="true">流式</option>
-            <option value="false">非流式</option>
-          </select>
-        </label>
-        <fieldset class="field fieldset">
-          <legend>关键词截断</legend>
-          <label class="check-line">
-            <input type="checkbox" name="keywordTruncationEnabled">
-            检测到关键词后手动结束流式
-          </label>
-          <label class="field nested-field">
-            <span>关键词</span>
-            <input name="keywordTruncationKeyword" placeholder="<true>">
-          </label>
-        </fieldset>
-        <fieldset class="field fieldset">
-          <legend>参数透传</legend>
-          <div class="check-grid">
-            <label><input type="checkbox" name="pass_temperature" checked> temperature</label>
-            <label><input type="checkbox" name="pass_top_p" checked> top_p</label>
-            <label><input type="checkbox" name="pass_top_k" checked> top_k</label>
-            <label><input type="checkbox" name="pass_frequency_penalty" checked> frequency_penalty</label>
-            <label><input type="checkbox" name="pass_presence_penalty" checked> presence_penalty</label>
-          </div>
-        </fieldset>
         <div class="form-actions">
           <button type="button" class="btn ghost" id="addCancelBtn">取消</button>
           <button type="submit" class="btn primary">保存渠道</button>
@@ -192,43 +155,6 @@
           <span>服务商链接</span>
           <input name="providerLink">
         </label>
-        <label class="field">
-          <span>格式</span>
-          <select name="providerType">
-            <option value="auto">自动识别</option>
-            <option value="openai">OpenAI 兼容</option>
-            <option value="anthropic">Claude / Anthropic</option>
-            <option value="gemini">Gemini</option>
-          </select>
-        </label>
-        <label class="field">
-          <span>渠道传输</span>
-          <select name="stream">
-            <option value="true">流式</option>
-            <option value="false">非流式</option>
-          </select>
-        </label>
-        <fieldset class="field fieldset">
-          <legend>关键词截断</legend>
-          <label class="check-line">
-            <input type="checkbox" name="keywordTruncationEnabled">
-            检测到关键词后手动结束流式
-          </label>
-          <label class="field nested-field">
-            <span>关键词</span>
-            <input name="keywordTruncationKeyword" placeholder="<true>">
-          </label>
-        </fieldset>
-        <fieldset class="field fieldset">
-          <legend>参数透传</legend>
-          <div class="check-grid">
-            <label><input type="checkbox" name="pass_temperature"> temperature</label>
-            <label><input type="checkbox" name="pass_top_p"> top_p</label>
-            <label><input type="checkbox" name="pass_top_k"> top_k</label>
-            <label><input type="checkbox" name="pass_frequency_penalty"> frequency_penalty</label>
-            <label><input type="checkbox" name="pass_presence_penalty"> presence_penalty</label>
-          </div>
-        </fieldset>
         <div class="form-actions">
           <button type="button" class="btn ghost" id="editCancelBtn">取消</button>
           <button type="submit" class="btn primary">保存</button>

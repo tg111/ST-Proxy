@@ -1,7 +1,7 @@
 {
-  "name": "st-proxy",
+  "name": "codex-responses-proxy",
   "version": "1.0.0",
-  "description": "A Docker-friendly reverse proxy for SillyTavern with channel rotation and model aliases.",
+  "description": "A Docker-friendly Responses API reverse proxy for Codex with channel rotation and model aliases.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

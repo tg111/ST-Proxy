@@ -1,4 +1,4 @@
-const tokenKey = "st-proxy-api-key";
+const tokenKey = "codex-responses-proxy-api-key";
 const loginScreen = document.querySelector("#loginScreen");
 const appLayout = document.querySelector("#appLayout");
 const logoutBtn = document.querySelector("#logoutBtn");
@@ -12,7 +12,6 @@ const editForm = document.querySelector("#editForm");
 
 let apiKey = localStorage.getItem(tokenKey) || "";
 let channels = [];
-const samplingParameters = ["temperature", "top_p", "top_k", "frequency_penalty", "presence_penalty"];
 
 const baseUrlEl = document.querySelector("#baseUrl");
 baseUrlEl.textContent = location.origin;
@@ -77,9 +76,6 @@ logoutBtn.addEventListener("click", () => {
 
 document.querySelector("#addChannelBtn").addEventListener("click", () => {
   const form = document.querySelector("#channelForm");
-  form.elements.stream.value = "true";
-  setKeywordTruncation(form, { enabled: false, keyword: "" });
-  setParameterPass(form, defaultParameterPass());
   addModal.classList.remove("hidden");
   addModal.querySelector("input[name='apiBase']").focus();
 });
@@ -248,12 +244,6 @@ function renderChannels() {
     const noModels = !enabledModels.length
       ? `<span class="no-models-hint">未启用模型</span>` : "";
     const isEnabled = channel.enabled !== false;
-    const streamLabel = channel.stream === false ? "非流式" : "流式";
-    const keywordLabel = channel.keywordTruncation?.enabled
-      ? `关键词截断 ${channel.keywordTruncation.keyword}`
-      : "不截断";
-    const blockedParams = samplingParameters.filter(name => channel.parameterPass?.[name] === false);
-    const paramsLabel = blockedParams.length ? `不传 ${blockedParams.join(", ")}` : "采样参数透传";
 
     return `
       <div class="channel-card" data-id="${channel.id}">
@@ -270,10 +260,7 @@ function renderChannels() {
             <button type="button" class="btn ghost sm" data-action="edit">编辑</button>
           </div>
           <div class="card-meta">
-            <span class="badge">${escapeHtml(channel.providerType || "auto")}</span>
-            <span class="badge">${streamLabel}</span>
-            <span class="badge">${escapeHtml(keywordLabel)}</span>
-            <span class="badge">${escapeHtml(paramsLabel)}</span>
+            <span class="badge">Responses API</span>
             <span class="meta-sep">·</span>
             <span>使用 ${Number(channel.usageCount || 0)} 次</span>
             ${channel.note ? `<span class="meta-sep">·</span><span>${escapeHtml(channel.apiBase)}</span>` : ""}
@@ -353,7 +340,7 @@ async function channelAction(id, action, control) {
       return;
     }
     if (action === "test") {
-      showToast("正在发送对话测试：你好", "info");
+      showToast("正在发送 Responses 测试：你好", "info");
       try {
         const result = await request(`/api/channels/${id}/test`, { method: "POST", body: JSON.stringify({ message: "你好" }) });
         if (result.ok) {
@@ -462,10 +449,6 @@ async function openEditModal(id) {
   editForm.elements.apiKey.value = channel.apiKey || "";
   editForm.elements.note.value = channel.note || "";
   editForm.elements.providerLink.value = channel.providerLink || "";
-  editForm.elements.providerType.value = channel.providerType || "auto";
-  editForm.elements.stream.value = channel.stream === false ? "false" : "true";
-  setKeywordTruncation(editForm, channel.keywordTruncation || { enabled: false, keyword: "" });
-  setParameterPass(editForm, { ...defaultParameterPass(), ...(channel.parameterPass || {}) });
   editModal.classList.remove("hidden");
   editForm.elements.apiBase.focus();
 }
@@ -487,40 +470,8 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/`/g, "&#96;");
 }
 
-function defaultParameterPass() {
-  return Object.fromEntries(samplingParameters.map(name => [name, true]));
-}
-
 function formPayload(formEl) {
-  const payload = Object.fromEntries(new FormData(formEl).entries());
-  payload.parameterPass = Object.fromEntries(samplingParameters.map(name => [
-    name,
-    Boolean(formEl.elements[`pass_${name}`]?.checked)
-  ]));
-  payload.keywordTruncation = {
-    enabled: Boolean(formEl.elements.keywordTruncationEnabled?.checked),
-    keyword: String(formEl.elements.keywordTruncationKeyword?.value || "").trim()
-  };
-  delete payload.keywordTruncationEnabled;
-  delete payload.keywordTruncationKeyword;
-  for (const name of samplingParameters) delete payload[`pass_${name}`];
-  return payload;
-}
-
-function setParameterPass(formEl, parameterPass) {
-  for (const name of samplingParameters) {
-    const input = formEl.elements[`pass_${name}`];
-    if (input) input.checked = parameterPass[name] !== false;
-  }
-}
-
-function setKeywordTruncation(formEl, keywordTruncation) {
-  if (formEl.elements.keywordTruncationEnabled) {
-    formEl.elements.keywordTruncationEnabled.checked = keywordTruncation.enabled === true;
-  }
-  if (formEl.elements.keywordTruncationKeyword) {
-    formEl.elements.keywordTruncationKeyword.value = keywordTruncation.keyword || "";
-  }
+  return Object.fromEntries(new FormData(formEl).entries());
 }
 
 async function copyText(value, successMessage) {

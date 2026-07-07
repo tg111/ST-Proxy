@@ -2,7 +2,7 @@ const { URL } = require("url");
 const { aliases } = require("./channels");
 const { readBody, requireAuth, sendError, sendJson, staticFile } = require("./http");
 const { api } = require("./api");
-const { proxyChat } = require("./proxy");
+const { proxyResponses } = require("./proxy");
 
 async function route(req, res) {
   try {
@@ -18,13 +18,13 @@ async function route(req, res) {
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
     if (url.pathname === "/v1/models") {
       if (!requireAuth(req, res)) return;
-      const data = [...aliases().keys()].sort().map(id => ({ id, object: "model", created: 0, owned_by: "st-proxy" }));
+      const data = [...aliases().keys()].sort().map(id => ({ id, object: "model", created: 0, owned_by: "codex-responses-proxy" }));
       return sendJson(res, 200, { object: "list", data });
     }
-    if (req.method === "POST" && ["/v1/chat/completions", "/v1/completions"].includes(url.pathname)) {
+    if (req.method === "POST" && url.pathname === "/v1/responses") {
       if (!requireAuth(req, res)) return;
       const body = await readBody(req);
-      return await proxyChat(req, res, body);
+      return await proxyResponses(req, res, body);
     }
     sendError(res, 404, "Not found");
   } catch (error) {

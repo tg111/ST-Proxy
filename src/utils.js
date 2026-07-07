@@ -33,12 +33,12 @@ function usageErrorDetail(error, fallback = {}) {
   };
 }
 
-function responseText(body) {
-  return body?.choices?.[0]?.message?.content || body?.choices?.[0]?.text || "";
-}
-
-function responseFinishReason(body) {
-  return body?.choices?.[0]?.finish_reason || body?.choices?.[0]?.finishReason || "stop";
+function responseOutputText(body) {
+  if (typeof body?.output_text === "string") return body.output_text;
+  const output = Array.isArray(body?.output) ? body.output : [];
+  return output.flatMap(item => Array.isArray(item.content) ? item.content : [])
+    .map(part => part.text || "")
+    .join("");
 }
 
 module.exports = {
@@ -47,6 +47,5 @@ module.exports = {
   preview,
   upstreamError,
   usageErrorDetail,
-  responseText,
-  responseFinishReason
+  responseOutputText
 };

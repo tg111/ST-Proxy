@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-echo "Starting ST Proxy..."
+echo "Starting Codex Responses Proxy..."
 
 NODE_VERSION="${NODE_VERSION:-v20.11.1}"
 LOCAL_NODE_ROOT=".local-node"
@@ -88,7 +88,7 @@ if [ ! -f config.json ]; then
 fi
 
 echo ""
-echo "ST Proxy is starting."
+echo "Codex Responses Proxy is starting."
 echo "Config file: ./config.json"
 echo ""
 echo "Press Ctrl+C to stop."

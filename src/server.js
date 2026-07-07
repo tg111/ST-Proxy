@@ -31,6 +31,6 @@ server.on("error", error => {
 });
 
 server.listen(PORT, () => {
-  console.log(`st-proxy listening on http://0.0.0.0:${PORT}`);
+  console.log(`codex-responses-proxy listening on http://0.0.0.0:${PORT}`);
   console.log(`admin/proxy api key: ${state.apiKey}`);
 });

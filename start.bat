@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-echo Starting ST Proxy...
+echo Starting Codex Responses Proxy...
 
 set "NODE_VERSION=v20.11.1"
 set "LOCAL_NODE_ROOT=.local-node"
@@ -44,7 +44,7 @@ if not exist config.json (
 )
 
 echo.
-echo ST Proxy is starting.
+echo Codex Responses Proxy is starting.
 echo Config file: .\config.json
 echo.
 echo Press Ctrl+C to stop.

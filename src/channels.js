@@ -2,52 +2,10 @@ const crypto = require("crypto");
 const { state } = require("./state");
 const { normalizeBase, preview, upstreamError } = require("./utils");
 
-const SAMPLING_PARAMETERS = [
-  "temperature",
-  "top_p",
-  "top_k",
-  "frequency_penalty",
-  "presence_penalty"
-];
-
-function defaultParameterPass() {
-  return Object.fromEntries(SAMPLING_PARAMETERS.map(name => [name, true]));
-}
-
-function sanitizeParameterPass(input, previous = {}) {
-  const source = input && typeof input === "object" ? input : null;
-  if (!source) return { ...defaultParameterPass(), ...(previous || {}) };
-  return Object.fromEntries(SAMPLING_PARAMETERS.map(name => [name, source[name] !== false && source[name] !== "false"]));
-}
-
-function sanitizeKeywordTruncation(input, previous = {}) {
-  const source = input && typeof input === "object" ? input : null;
-  const keyword = source
-    ? String(source.keyword || "").trim()
-    : String(previous.keyword || "").trim();
-  const enabled = source
-    ? (source.enabled === true || source.enabled === "true") && Boolean(keyword)
-    : previous.enabled === true && Boolean(keyword);
-  return { enabled, keyword };
-}
-
-function providerOf(channel) {
-  if (channel.providerType && channel.providerType !== "auto") return channel.providerType;
-  const base = normalizeBase(channel.apiBase).toLowerCase();
-  if (base.includes("generativelanguage.googleapis.com")) return "gemini";
-  if (base.includes("anthropic.com")) return "anthropic";
-  return "openai";
-}
-
 function openaiUrl(base, suffix) {
   const clean = normalizeBase(base);
   if (clean.endsWith("/v1")) return `${clean}${suffix}`;
   return `${clean}/v1${suffix}`;
-}
-
-function geminiBase(base) {
-  const clean = normalizeBase(base);
-  return clean.endsWith("/v1beta") ? clean : `${clean}/v1beta`;
 }
 
 function publicChannel(channel, options = {}) {
@@ -71,10 +29,6 @@ function sanitizeChannel(input, previous = {}) {
     apiKey,
     note: String(input.note || ""),
     providerLink: String(input.providerLink || ""),
-    providerType: input.providerType || previous.providerType || "auto",
-    stream: input.stream === undefined ? previous.stream !== false : input.stream !== false && input.stream !== "false",
-    parameterPass: sanitizeParameterPass(input.parameterPass, previous.parameterPass),
-    keywordTruncation: sanitizeKeywordTruncation(input.keywordTruncation, previous.keywordTruncation),
     enabled: input.enabled === undefined ? previous.enabled !== false : Boolean(input.enabled),
     models: Array.isArray(previous.models) ? previous.models : [],
     createdAt: previous.createdAt || new Date().toISOString(),
@@ -83,23 +37,8 @@ function sanitizeChannel(input, previous = {}) {
 }
 
 async function fetchModels(channel) {
-  const provider = providerOf(channel);
-  if (provider === "gemini") {
-    const url = `${geminiBase(channel.apiBase)}/models?key=${encodeURIComponent(channel.apiKey)}`;
-    const res = await fetch(url);
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw upstreamError(body.error?.message || `Gemini model fetch failed: ${res.status}`, {
-      upstreamStatus: res.status,
-      upstreamUrl: url,
-      upstreamBody: preview(body)
-    });
-    return (body.models || []).map(model => String(model.name || "").replace(/^models\//, "")).filter(Boolean);
-  }
-
   const url = openaiUrl(channel.apiBase, "/models");
-  const headers = provider === "anthropic"
-    ? { "x-api-key": channel.apiKey, "anthropic-version": "2023-06-01" }
-    : { authorization: `Bearer ${channel.apiKey}` };
+  const headers = { authorization: `Bearer ${channel.apiKey}` };
   const res = await fetch(url, { headers });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw upstreamError(body.error?.message || `Model fetch failed: ${res.status}`, {
@@ -182,10 +121,7 @@ function sortedCandidates(alias) {
 }
 
 module.exports = {
-  SAMPLING_PARAMETERS,
-  providerOf,
   openaiUrl,
-  geminiBase,
   publicChannel,
   sanitizeChannel,
   fetchModels,

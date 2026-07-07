@@ -3,13 +3,11 @@ const { readBody, requireAuth, sendError, sendJson } = require("./http");
 const {
   fetchModels,
   mergeModels,
-  providerOf,
   publicChannel,
   sanitizeChannel,
   sanitizeModels
 } = require("./channels");
-const { testChannel } = require("./providers");
-const { responseText } = require("./utils");
+const { responseOutputText, testChannel } = require("./providers");
 
 async function api(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/login") {
@@ -75,7 +73,6 @@ async function api(req, res, url) {
           sourceModel: result.model.id,
           channelId: channel.id,
           channelNote: channel.note,
-          provider: result.provider,
           request: testMessage
         });
         return sendJson(res, 200, {
@@ -84,8 +81,7 @@ async function api(req, res, url) {
           request: testMessage,
           model: result.model.id,
           alias: result.model.alias || result.model.id,
-          provider: result.provider,
-          response: responseText(result.upstream.body)
+          response: responseOutputText(result.upstream.body)
         });
       } catch (error) {
         const model = (channel.models || []).find(item => item.enabled) || (channel.models || [])[0] || {};
@@ -96,7 +92,6 @@ async function api(req, res, url) {
           sourceModel: model.id || "",
           channelId: channel.id,
           channelNote: channel.note,
-          provider: providerOf(channel),
           request: testMessage,
           error: error.message,
           upstreamStatus: error.upstreamStatus || null,
